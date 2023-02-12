@@ -1,3 +1,6 @@
+mod core;
+use crate::core::chess_types::*;
+
 fn main() {
-    println!("Hello, chest!");
+    println!("Hello, {:?} {:?}!", Side::Black, Piece::King);
 }
