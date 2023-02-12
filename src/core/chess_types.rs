@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Color {
     White,
     Black
@@ -86,6 +86,7 @@ pub const ROW_SIZE: u8 = 8u8;
 pub const CELLS_COUNT: u8 = ROW_SIZE * ROW_SIZE;
 pub type BoardLayer<T> = [T; CELLS_COUNT as usize];
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Address {
     pub row: u8,
     pub col: u8
@@ -102,6 +103,13 @@ impl Address {
 
     pub fn get_col_name(col: u8) -> char {
         ('a' as u8 + col) as char
+    }
+
+    pub fn get_color(&self) -> Color {
+        let flip = self.row % 2;
+        let is_black = (self.col % 2) == flip;
+        
+        if is_black { Color::Black } else { Color::White }
     }
 }
 
@@ -129,9 +137,9 @@ impl FromStr for Address {
             return Err(ParseAddressError)
         }
 
-        res.row = row.to_digit(10).ok_or(ParseAddressError)? as u8;
-
-        if res.row < 1 || res.row > 8 {
+        if let r @ '1'..='8' = row {
+            res.row = (r as u8) - ('1' as u8)
+        } else {
             return Err(ParseAddressError)
         }
         
@@ -222,5 +230,88 @@ impl Display for Board {
         }
 
         write!(f, "{}", res)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{cell::Cell};
+
+    use super::*;
+
+    #[test]
+    fn address_parse() {
+        macro_rules! check_neg {
+            ($addr:expr) => {
+                assert_eq!(Address::from_str($addr), Err(ParseAddressError));
+            };
+        }
+
+        check_neg!("");
+        check_neg!("a");
+        check_neg!("f11");
+        check_neg!("6e");
+        check_neg!("f9");
+        check_neg!("j5");
+        check_neg!("2");
+        check_neg!("2789");
+        check_neg!("1f");
+        check_neg!("c0");
+
+        for r in '1'..='8' {
+            for c in 'a'..='h' {
+                let addr_str = c.to_string() + &r.to_string();
+                let addr = Address::from_str(&addr_str).unwrap();
+
+                let r_int: u8 = (r as u8) - ('1' as u8);
+                let c_int: u8 = (c as u8) - ('a' as u8);
+
+                println!("{}: ({}, {})", addr_str, r_int, c_int);
+
+                assert_eq!(addr, Address {row: r_int, col: c_int});
+            }
+        }
+    }
+
+    #[test]
+    fn address_color() {
+        let color = Cell::new(Color::Black);
+        let flip_color = || {
+            color.set(
+                if color.get() == Color::Black { Color::White } else { Color::Black }
+            );
+        };
+
+        for r in '1'..='8' {
+            for c in 'a'..='h' {
+                let addr_str = c.to_string() + &r.to_string();
+                let addr = Address::from_str(&addr_str).unwrap();
+
+                println!("{}: {:?}", addr_str, color.get());
+                assert_eq!(addr.get_color(), color.get());
+
+                flip_color();
+            }
+            flip_color();
+        }
+    }
+
+    #[test]
+    fn board_index() {
+        assert_eq!(Board::get_index(Address::from_str("e4").unwrap()), 28);
+
+        let mut index = 0;
+
+        for r in '1'..='8' {
+            for c in 'a'..='h' {
+                let addr_str = c.to_string() + &r.to_string();
+                let addr = Address::from_str(&addr_str).unwrap();
+
+                println!("{}: {}", addr_str, index);
+                assert_eq!(Board::get_index(addr), index);
+
+                index += 1;
+            }
+        }
     }
 }
