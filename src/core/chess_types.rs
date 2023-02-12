@@ -149,6 +149,7 @@ impl FromStr for Address {
 
 pub struct Board {
     pub pieces: BoardLayer<Option<Piece>>,
+    pub flip_board: bool
 }
 
 impl Board {
@@ -176,13 +177,15 @@ impl Board {
                 None,    None,      None,      None,     None,    None,      None,      None,
                 b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),  b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),
                 b(Rook), b(Knight), b(Bishop), b(Queen), b(King), b(Bishop), b(Knight), b(Rook)
-            ]
+            ],
+            flip_board: false
         }
     }
 
     pub fn new_empty() -> Self {
         Board {
-            pieces: [None; CELLS_COUNT as usize]
+            pieces: [None; CELLS_COUNT as usize],
+            flip_board: false
         }
     }
 
@@ -197,14 +200,28 @@ impl Board {
     pub fn get_cell_mut(&mut self, address: Address) -> &mut Option<Piece> {
         &mut self.pieces[Self::get_index(address) as usize]
     }
+
+    pub fn flip(&mut self) {
+        self.flip_board = !self.flip_board;
+    }
+
+    pub fn flip_for(&mut self, color: Color) {
+        self.flip_board = color == Color::Black;
+    }
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut res = String::new();
+        res += "\n";
 
         for r in 0..ROW_SIZE {
-            let r = ROW_SIZE - r - 1;
+            let r = if !self.flip_board {
+                ROW_SIZE - r - 1
+            } else {
+                r
+            };
+
             res += &Address::get_row_name(r).to_string();
             res += " ";
 
@@ -225,6 +242,12 @@ impl Display for Board {
         res += "  ";
 
         for c in 0..ROW_SIZE {
+            let c = if self.flip_board {
+                ROW_SIZE - c - 1
+            } else {
+                c
+            };
+
             res += &Address::get_col_name(c).to_string();
             res += " ";
         }
