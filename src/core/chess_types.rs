@@ -48,6 +48,12 @@ pub enum Side {
     Queen,
 }
 
+#[derive(Debug)]
+pub enum MoveType {
+    March,
+    Capture
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Piece {
     pub piece_type: PieceType,
@@ -94,6 +100,9 @@ pub struct Address {
 
 impl Address {
     pub fn new(row: u8, col: u8) -> Self {
+        assert!(row < ROW_SIZE);
+        assert!(col < ROW_SIZE);
+
         Address { row, col }
     }
 
@@ -110,6 +119,20 @@ impl Address {
         let is_black = (self.col % 2) == flip;
         
         if is_black { Color::Black } else { Color::White }
+    }
+
+    pub fn get_shifted(&self, row_offset: i8, col_offset: i8) -> Option<Address> {
+        let new_row = (self.row as i8) + row_offset;
+        let new_col = (self.col as i8) + col_offset;
+
+        if new_row >= 0
+        && new_row < (ROW_SIZE as i8)
+        && new_col >= 0
+        && new_col < (ROW_SIZE as i8) {
+            Some(Address::new(new_row as u8, new_col as u8))
+        } else {
+            None
+        }
     }
 }
 
@@ -144,6 +167,12 @@ impl FromStr for Address {
         }
         
         Ok(res)
+    }
+}
+
+impl Display for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", Self::get_col_name(self.col), Self::get_row_name(self.row))
     }
 }
 
@@ -283,7 +312,7 @@ mod test {
 
         for r in '1'..='8' {
             for c in 'a'..='h' {
-                let addr_str = c.to_string() + &r.to_string();
+                let addr_str = format!("{}{}", c, r);
                 let addr = Address::from_str(&addr_str).unwrap();
 
                 let r_int: u8 = (r as u8) - ('1' as u8);
@@ -305,12 +334,11 @@ mod test {
             );
         };
 
-        for r in '1'..='8' {
-            for c in 'a'..='h' {
-                let addr_str = c.to_string() + &r.to_string();
-                let addr = Address::from_str(&addr_str).unwrap();
+        for r in 0..ROW_SIZE {
+            for c in 0..ROW_SIZE {
+                let addr = Address::new(r, c);
 
-                println!("{}: {:?}", addr_str, color.get());
+                println!("{}: {:?}", addr, color.get());
                 assert_eq!(addr.get_color(), color.get());
 
                 flip_color();
@@ -320,17 +348,67 @@ mod test {
     }
 
     #[test]
+    fn address_shift() {
+        let cell = |s: &str| -> Address {
+            Address::from_str(s).unwrap()
+        };
+        let addr = |row: u8, col :u8| -> Address {
+            Address::new(row, col)
+        };
+
+        assert_eq!(
+            cell("e4").get_shifted(-2, 0),
+            Some(cell("e2"))
+        );
+        assert_eq!(
+            addr(5, 5).get_shifted(1, 2),
+            Some(addr(6, 7))
+        );
+        assert_eq!(
+            cell("a1").get_shifted(0, 0),
+            Some(cell("a1"))
+        );
+        assert_eq!(
+            cell("a1").get_shifted(-1, 0),
+            None
+        );
+        assert_eq!(
+            cell("a1").get_shifted(0, -1),
+            None
+        );
+        assert_eq!(
+            cell("a1").get_shifted(-1, -1),
+            None
+        );
+        assert_eq!(
+            cell("g8").get_shifted(-1, -1),
+            Some(cell("f7"))
+        );
+        assert_eq!(
+            cell("g8").get_shifted(1, 0),
+            None
+        );
+        assert_eq!(
+            cell("g8").get_shifted(0, 1),
+            Some(cell("h8"))
+        );
+        assert_eq!(
+            cell("a8").get_shifted(-7, 7),
+            Some(cell("h1"))
+        );
+    }
+
+    #[test]
     fn board_index() {
         assert_eq!(Board::get_index(Address::from_str("e4").unwrap()), 28);
 
         let mut index = 0;
 
-        for r in '1'..='8' {
-            for c in 'a'..='h' {
-                let addr_str = c.to_string() + &r.to_string();
-                let addr = Address::from_str(&addr_str).unwrap();
+        for r in 0..ROW_SIZE {
+            for c in 0..ROW_SIZE {
+                let addr = Address::new(r, c);
 
-                println!("{}: {}", addr_str, index);
+                println!("{}: {}", addr, index);
                 assert_eq!(Board::get_index(addr), index);
 
                 index += 1;
