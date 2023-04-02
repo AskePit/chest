@@ -1,11 +1,69 @@
 use super::chess_types::*;
 
+// MOVE OFFSETS
+// tuple (x, y) where
+// x is column: negative left, positive right
+// y is row: negative back, positive forwards
+//
+// offsets are given for white pieces
+// for black pieces offsets should be rotated by 180 degrees
+static PAWN_MARCH_OFFSET: &[(i8, i8)] = &[
+    (0, 1)
+];
+
+static PAWN_LONG_MARCH_OFFSET: &[(i8, i8)] = &[
+    (0, 2)
+];
+
+static PAWN_CAPTURE_OFFSETS: &[(i8, i8)] = &[
+    (-1, 1),
+    ( 1, 1)
+];
+
+static KNIGHT_MOVE_OFFSETS: &[(i8, i8)] = &[
+    (-1,  2),
+    ( 1,  2),
+    ( 2,  1),
+    ( 2, -1),
+    ( 1, -2),
+    (-1, -2),
+    (-2, -1),
+    (-2,  1),
+];
+
+static BISHOP_MOVE_OFFSETS: &[(i8, i8)] = &[
+    (-1, -1),
+    (-1,  1),
+    ( 1, -1),
+    ( 1,  1),
+];
+
+static ROOK_MOVE_OFFSETS: &[(i8, i8)] = &[
+    (-1,  0),
+    ( 0,  1),
+    ( 1,  0),
+    ( 0, -1),
+];
+
+static KING_QUEEN_MOVE_OFFSETS: &[(i8, i8)] = &[
+    (-1,  0),
+    ( 0,  1),
+    ( 1,  0),
+    ( 0, -1),
+    (-1, -1),
+    (-1,  1),
+    ( 1, -1),
+    ( 1,  1),
+];
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct MoveError;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct AttackError;
+pub struct MarchError;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct CaptureError;
 
 pub type MovesResult = Result<Vec<Address>, MoveError>;
 
@@ -29,27 +87,107 @@ pub fn get_piece_moves(board: &Board, address: Address) -> MovesResult {
 }
 
 fn get_pawn_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
-    if color == Color::White {
-        address.get_shifted(1, 0)
+    static WHITE_PAWN_INITIAL_ROW: u8 = 1; // like e2
+    static BLACK_PAWN_INITIAL_ROW: u8 = 6; // like e7
+    let is_initial_row =
+        (color == Color::White && address.row == WHITE_PAWN_INITIAL_ROW)
+        || (color == Color::Black && address.row == BLACK_PAWN_INITIAL_ROW);
+    
+    let rotate_by_color = |offset: (i8, i8)| -> (i8, i8) {
+        if color == Color::White { offset } else { (-offset.0, -offset.1) }
+    };
+
+    // long march
+    if is_initial_row {
+        let long_march = rotate_by_color(PAWN_LONG_MARCH_OFFSET[0]);
+        if let Some(move_address) = address.get_shifted(long_march) {
+            if let None = *board.get_cell(move_address) {
+                out.push(move_address);
+            }
+        }
+    }
+
+    // usual march
+    let normal_march = rotate_by_color(PAWN_MARCH_OFFSET[0]);
+    if let Some(move_address) = address.get_shifted(normal_march) {
+        if let None = *board.get_cell(move_address) {
+            out.push(move_address);
+        }
+    }
+
+    // captures
+    for capture_offset in PAWN_CAPTURE_OFFSETS {
+        if let Some(move_address) = address.get_shifted(rotate_by_color(*capture_offset)) {
+            if let Some(ref piece) = *board.get_cell(move_address) {
+                if piece.color != color {
+                    out.push(move_address);
+                }
+            }
+        }
     }
 }
 
-fn get_knight_moves(board: &Board, address: Address, _color: Color, out: &mut Vec<Address>) {
-
+fn get_scalar_piece_moves(scalar_offsets: &[(i8, i8)], board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    for offset in scalar_offsets {
+        if let Some(move_address) = address.get_shifted(*offset) {
+            if let Some(ref piece) = *board.get_cell(move_address) {
+                if piece.color != color {
+                    out.push(move_address);
+                }
+            } else {
+                out.push(move_address);
+            }
+        }
+    }
 }
 
-fn get_bishop_moves(board: &Board, address: Address, _color: Color, out: &mut Vec<Address>) {
-
+fn get_vector_piece_moves(vector_offsets: &[(i8, i8)], board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    for offset in vector_offsets {
+        while let Some(move_address) = address.get_shifted(*offset) {
+            if let Some(ref piece) = *board.get_cell(move_address) {
+                if piece.color != color {
+                    out.push(move_address);
+                }
+                break;
+            } else {
+                out.push(move_address);
+            }
+        }
+    }
 }
 
-fn get_rook_moves(board: &Board, address: Address, _color: Color, out: &mut Vec<Address>) {
-
+fn get_knight_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    get_scalar_piece_moves(KNIGHT_MOVE_OFFSETS, board, address, color, out);
 }
 
-fn get_queen_moves(board: &Board, address: Address, _color: Color, out: &mut Vec<Address>) {
-
+fn get_bishop_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    get_vector_piece_moves(BISHOP_MOVE_OFFSETS, board, address, color, out);
 }
 
-fn get_king_moves(board: &Board, address: Address, _color: Color, out: &mut Vec<Address>) {
+fn get_rook_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    get_vector_piece_moves(ROOK_MOVE_OFFSETS, board, address, color, out);
+}
 
+fn get_queen_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    get_vector_piece_moves(KING_QUEEN_MOVE_OFFSETS, board, address, color, out);
+}
+
+fn get_king_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+    get_scalar_piece_moves(KING_QUEEN_MOVE_OFFSETS, board, address, color, out);
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn board_moves() {
+        let board = Board::new();
+        let res = get_piece_moves(&board, Address::from_str("e2").unwrap());
+        assert_eq!(res.is_ok(), true);
+
+        println!("{:?}", res.unwrap());
+    }
 }

@@ -54,6 +54,12 @@ pub enum MoveType {
     Capture
 }
 
+#[derive(Debug)]
+pub enum MoveNature {
+    Scalar,
+    Vector
+}
+
 #[derive(Debug, Copy, Clone)]
 pub struct Piece {
     pub piece_type: PieceType,
@@ -90,20 +96,22 @@ impl Display for Piece {
 
 pub const ROW_SIZE: u8 = 8u8;
 pub const CELLS_COUNT: u8 = ROW_SIZE * ROW_SIZE;
+
+// from [a1..a8] to [h1..h8]
 pub type BoardLayer<T> = [T; CELLS_COUNT as usize];
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Address {
-    pub row: u8,
-    pub col: u8
+    pub col: u8,
+    pub row: u8
 }
 
 impl Address {
-    pub fn new(row: u8, col: u8) -> Self {
-        assert!(row < ROW_SIZE);
+    pub fn new(col: u8, row: u8) -> Self {
         assert!(col < ROW_SIZE);
+        assert!(row < ROW_SIZE);
 
-        Address { row, col }
+        Address { col, row }
     }
 
     pub fn get_row_name(row: u8) -> char {
@@ -121,15 +129,18 @@ impl Address {
         if is_black { Color::Black } else { Color::White }
     }
 
-    pub fn get_shifted(&self, row_offset: i8, col_offset: i8) -> Option<Address> {
-        let new_row = (self.row as i8) + row_offset;
+    pub fn get_shifted(&self, offset: (i8, i8)) -> Option<Address> {
+        let col_offset = offset.0;
+        let row_offset = offset.1;
+
         let new_col = (self.col as i8) + col_offset;
+        let new_row = (self.row as i8) + row_offset;
 
         if new_row >= 0
         && new_row < (ROW_SIZE as i8)
         && new_col >= 0
         && new_col < (ROW_SIZE as i8) {
-            Some(Address::new(new_row as u8, new_col as u8))
+            Some(Address::new(new_col as u8, new_row as u8))
         } else {
             None
         }
@@ -143,7 +154,7 @@ impl FromStr for Address {
     type Err = ParseAddressError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut res: Self = Address{row: 0, col:0};
+        let mut res: Self = Address{col:0, row: 0};
 
         let chars = s.chars().collect::<Vec<_>>();
 
@@ -255,7 +266,13 @@ impl Display for Board {
             res += " ";
 
             for c in 0..ROW_SIZE {
-                let cell = self.get_cell(Address::new(r ,c));
+                let c = if self.flip_board {
+                    ROW_SIZE - c - 1
+                } else {
+                    c
+                };
+
+                let cell = self.get_cell(Address::new(c, r));
 
                 if let Some(ref piece) = *cell {
                     let s = piece.to_string();
@@ -336,7 +353,7 @@ mod test {
 
         for r in 0..ROW_SIZE {
             for c in 0..ROW_SIZE {
-                let addr = Address::new(r, c);
+                let addr = Address::new(c, r);
 
                 println!("{}: {:?}", addr, color.get());
                 assert_eq!(addr.get_color(), color.get());
@@ -357,43 +374,43 @@ mod test {
         };
 
         assert_eq!(
-            cell("e4").get_shifted(-2, 0),
+            cell("e4").get_shifted((0, -2)),
             Some(cell("e2"))
         );
         assert_eq!(
-            addr(5, 5).get_shifted(1, 2),
+            addr(5, 5).get_shifted((1, 2)),
             Some(addr(6, 7))
         );
         assert_eq!(
-            cell("a1").get_shifted(0, 0),
+            cell("a1").get_shifted((0, 0)),
             Some(cell("a1"))
         );
         assert_eq!(
-            cell("a1").get_shifted(-1, 0),
+            cell("a1").get_shifted((-1, 0)),
             None
         );
         assert_eq!(
-            cell("a1").get_shifted(0, -1),
+            cell("a1").get_shifted((0, -1)),
             None
         );
         assert_eq!(
-            cell("a1").get_shifted(-1, -1),
+            cell("a1").get_shifted((-1, -1)),
             None
         );
         assert_eq!(
-            cell("g8").get_shifted(-1, -1),
+            cell("g8").get_shifted((-1, -1)),
             Some(cell("f7"))
         );
         assert_eq!(
-            cell("g8").get_shifted(1, 0),
+            cell("g8").get_shifted((0, 1)),
             None
         );
         assert_eq!(
-            cell("g8").get_shifted(0, 1),
+            cell("g8").get_shifted((1, 0)),
             Some(cell("h8"))
         );
         assert_eq!(
-            cell("a8").get_shifted(-7, 7),
+            cell("a8").get_shifted((7, -7)),
             Some(cell("h1"))
         );
     }
@@ -406,7 +423,7 @@ mod test {
 
         for r in 0..ROW_SIZE {
             for c in 0..ROW_SIZE {
-                let addr = Address::new(r, c);
+                let addr = Address::new(c, r);
 
                 println!("{}: {}", addr, index);
                 assert_eq!(Board::get_index(addr), index);
