@@ -114,6 +114,10 @@ impl Address {
         Address { col, row }
     }
 
+    pub fn parse(s: &str) -> Self {
+        Address::from_str(s).unwrap()
+    }
+
     pub fn get_row_name(row: u8) -> char {
         ('1' as u8 + row) as char
     }
@@ -189,7 +193,23 @@ impl Display for Address {
 
 pub struct Board {
     pub pieces: BoardLayer<Option<Piece>>,
-    pub flip_board: bool
+    pub whose_turn: Color,
+    pub flip_board: bool,
+
+    pub white_graveyard: Vec<Piece>,
+    pub black_graveyard: Vec<Piece>,
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self {
+            pieces: [None; CELLS_COUNT as usize],
+            whose_turn: Color::White,
+            flip_board: false,
+            white_graveyard: Vec::new(),
+            black_graveyard: Vec::new()
+        }
+    }
 }
 
 impl Board {
@@ -218,14 +238,14 @@ impl Board {
                 b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),  b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),
                 b(Rook), b(Knight), b(Bishop), b(Queen), b(King), b(Bishop), b(Knight), b(Rook)
             ],
-            flip_board: false
+            ..Default::default()
         }
     }
 
     pub fn new_empty() -> Self {
         Board {
             pieces: [None; CELLS_COUNT as usize],
-            flip_board: false
+            ..Default::default()
         }
     }
 
@@ -241,18 +261,52 @@ impl Board {
         &mut self.pieces[Self::get_index(address) as usize]
     }
 
-    pub fn flip(&mut self) {
+    pub fn flip_board(&mut self) {
         self.flip_board = !self.flip_board;
     }
 
-    pub fn flip_for(&mut self, color: Color) {
+    pub fn flip_board_for(&mut self, color: Color) {
         self.flip_board = color == Color::Black;
+    }
+
+    pub fn flip_player(&mut self) {
+        self.whose_turn = if self.whose_turn == Color::White { Color::Black } else {Color::White};
+    }
+
+    pub fn kill_piece(&mut self, address: Address) {
+        let index = Self::get_index(address) as usize;
+        if let Some(piece) = self.pieces[index] {
+            if piece.color == Color::White {
+                self.white_graveyard.push(piece)
+            } else {
+                self.black_graveyard.push(piece)
+            }
+
+            self.pieces[index] = None
+        }
+    }
+
+    pub fn move_piece(&mut self, from: Address, to: Address) {
+        self.kill_piece(to);
+        
+        let index_from = Self::get_index(from) as usize;
+        let index_to = Self::get_index(to) as usize;
+
+        self.pieces[index_to] = self.pieces[index_from];
+        self.pieces[index_from] = None
     }
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut res = String::new();
+
+        res += "\n  ";
+        for p in &self.white_graveyard {
+            let s = p.to_string();
+            res += s.as_ref();
+            res += " ";
+        }
         res += "\n";
 
         for r in 0..ROW_SIZE {
@@ -295,6 +349,13 @@ impl Display for Board {
             };
 
             res += &Address::get_col_name(c).to_string();
+            res += " ";
+        }
+
+        res += "\n  ";
+        for p in &self.black_graveyard {
+            let s = p.to_string();
+            res += s.as_ref();
             res += " ";
         }
 

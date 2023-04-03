@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::chess_types::*;
 
 // MOVE OFFSETS
@@ -143,7 +145,8 @@ fn get_scalar_piece_moves(scalar_offsets: &[(i8, i8)], board: &Board, address: A
 
 fn get_vector_piece_moves(vector_offsets: &[(i8, i8)], board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
     for offset in vector_offsets {
-        while let Some(move_address) = address.get_shifted(*offset) {
+        let mut addr = address.get_shifted(*offset);
+        while let Some(move_address) = addr {
             if let Some(ref piece) = *board.get_cell(move_address) {
                 if piece.color != color {
                     out.push(move_address);
@@ -152,6 +155,8 @@ fn get_vector_piece_moves(vector_offsets: &[(i8, i8)], board: &Board, address: A
             } else {
                 out.push(move_address);
             }
+
+            addr = move_address.get_shifted(*offset);
         }
     }
 }
@@ -174,6 +179,33 @@ fn get_queen_moves(board: &Board, address: Address, color: Color, out: &mut Vec<
 
 fn get_king_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
     get_scalar_piece_moves(KING_QUEEN_MOVE_OFFSETS, board, address, color, out);
+}
+
+pub fn make_move(board: &mut Board, from: Address, to: Address) -> Result<(), MoveError> {
+    if let Some(piece) = board.get_cell(from) {
+        if piece.color != board.whose_turn {
+            return Err(MoveError);
+        }
+    }
+    let possible_moves = get_piece_moves(&board, from)?;
+
+    if possible_moves.contains(&to) {
+        board.move_piece(from, to);
+        board.flip_player();
+        Ok(())
+    } else {
+        Err(MoveError)
+    }
+}
+
+pub fn make_moves(board: &mut Board, moves: Vec<(&str, &str)>) -> Result<(), MoveError> {
+    for m in moves {
+        make_move(board,
+            Address::from_str(m.0).map_err(|_| MoveError)?,
+            Address::from_str(m.1).map_err(|_| MoveError)?)?
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
