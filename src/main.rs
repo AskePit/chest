@@ -1,6 +1,7 @@
 mod core;
 use crate::core::chess_types::*;
 use crate::core::*;
+use web_view::*;
 
 fn main() {
     let mut board = Board::new();
@@ -30,4 +31,17 @@ fn main() {
     for addr in res.unwrap() {
         print!("{} ", addr);
     }
+
+    let html_content = format!("<html><body><h1>{}</h1></body></html>", board).replace("\n", "<br/>");
+	
+    web_view::builder()
+        .title("Chest")
+        .content(Content::Html(include_str!("gui/index.html")))
+        .size(614, 614)
+        .resizable(false)
+        .debug(false)
+        .user_data(())
+        .invoke_handler(|_webview, _arg| Ok(()))
+        .run()
+        .unwrap();
 }
