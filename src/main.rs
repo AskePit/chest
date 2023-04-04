@@ -9,7 +9,7 @@ fn main() {
     let _ = game_engine::make_moves(&mut board, vec![
         ("e2", "e4"),
         ("c7", "c6"),
-        ("e4", "e5"),
+        ("b1", "c3"),
         ("d7", "d5"),
         ("e4", "d5"),
         ("d5", "c6"),

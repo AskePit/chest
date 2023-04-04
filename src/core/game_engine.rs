@@ -59,20 +59,19 @@ static KING_QUEEN_MOVE_OFFSETS: &[(i8, i8)] = &[
 ];
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct MoveError;
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct MarchError;
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct CaptureError;
+pub enum MoveError {
+    InvalidAddress(ParseAddressError),
+    NoPiece,
+    WrongColorTurn(Color),
+    UnreachableMove{from: Address, to: Address},
+}
 
 pub type MovesResult = Result<Vec<Address>, MoveError>;
 
 pub fn get_piece_moves(board: &Board, address: Address) -> MovesResult {
     let piece = board.get_cell(address)
         .as_ref()
-        .ok_or(MoveError)?;
+        .ok_or(MoveError::NoPiece)?;
     
     let mut res = Vec::<Address>::new();
 
@@ -184,7 +183,7 @@ fn get_king_moves(board: &Board, address: Address, color: Color, out: &mut Vec<A
 pub fn make_move(board: &mut Board, from: Address, to: Address) -> Result<(), MoveError> {
     if let Some(piece) = board.get_cell(from) {
         if piece.color != board.whose_turn {
-            return Err(MoveError);
+            return Err(MoveError::NoPiece);
         }
     }
     let possible_moves = get_piece_moves(&board, from)?;
@@ -194,15 +193,20 @@ pub fn make_move(board: &mut Board, from: Address, to: Address) -> Result<(), Mo
         board.flip_player();
         Ok(())
     } else {
-        Err(MoveError)
+        Err(MoveError::UnreachableMove { from, to })
     }
 }
 
 pub fn make_moves(board: &mut Board, moves: Vec<(&str, &str)>) -> Result<(), MoveError> {
     for m in moves {
+        let wrap_error = |parse_error| {
+            MoveError::InvalidAddress(parse_error)
+        };
+
         make_move(board,
-            Address::from_str(m.0).map_err(|_| MoveError)?,
-            Address::from_str(m.1).map_err(|_| MoveError)?)?
+            Address::from_str(m.0).map_err(wrap_error)?,
+            Address::from_str(m.1).map_err(wrap_error)?
+        )?
     }
 
     Ok(())
