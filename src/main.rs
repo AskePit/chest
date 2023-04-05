@@ -32,13 +32,11 @@ fn main() {
         print!("{} ", addr);
     }
 
-    let html_content = format!("<html><body><h1>{}</h1></body></html>", board).replace("\n", "<br/>");
-	
     web_view::builder()
         .title("Chest")
         .content(Content::Html(include_str!("gui/index.html")))
-        .size(614, 614)
-        .resizable(false)
+        .size(1000, 900)
+        .resizable(true)
         .debug(false)
         .user_data(())
         .invoke_handler(|_webview, _arg| Ok(()))
