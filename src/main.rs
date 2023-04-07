@@ -5,7 +5,6 @@ use web_view::*;
 
 fn main() {
     let mut board = Board::new();
-    //game_engine::make_move(&mut board, Address::parse("e2"), Address::parse("e4"));
 
     let _ = game_engine::make_moves(&mut board, vec![
         ("e2", "e4"),
@@ -32,14 +31,17 @@ fn main() {
         print!("{} ", addr);
     }
 
-    web_view::builder()
+    let mut webview = web_view::builder()
         .title("Chest")
         .content(Content::Html(include_str!("gui/index.html")))
         .size(1000, 900)
         .resizable(true)
         .debug(false)
         .user_data(())
-        .invoke_handler(|_webview, _arg| Ok(()))
-        .run()
-        .unwrap();
+        .invoke_handler(|_webview, _arg| {
+            Ok(())
+        }).build().unwrap();
+
+    webview.set_maximized(true);
+    webview.run().unwrap();
 }
