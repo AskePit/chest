@@ -1,3 +1,1 @@
-pub struct GameSession {
-
-}
+pub struct GameSession {}

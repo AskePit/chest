@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Color {
     White,
-    Black
+    Black,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -13,24 +13,24 @@ pub enum PieceType {
     Bishop,
     Rook,
     Queen,
-    King
+    King,
 }
 
 impl PieceType {
     pub fn get_value(&self, phase: GamePhase) -> u32 {
         let value = match self {
-            PieceType::Pawn   => 1,
+            PieceType::Pawn => 1,
             PieceType::Knight => 3,
             PieceType::Bishop => 3,
-            PieceType::Rook   => 5,
-            PieceType::Queen  => 9,
-            PieceType::King   => u32::MAX,
+            PieceType::Rook => 5,
+            PieceType::Queen => 9,
+            PieceType::King => u32::MAX,
         };
 
         match phase {
-            GamePhase::Opening    => value,
+            GamePhase::Opening => value,
             GamePhase::Middlegame => value,
-            GamePhase::Endgame    => value,
+            GamePhase::Endgame => value,
         }
     }
 }
@@ -39,7 +39,7 @@ impl PieceType {
 pub enum GamePhase {
     Opening,
     Middlegame,
-    Endgame
+    Endgame,
 }
 
 #[derive(Debug)]
@@ -51,43 +51,39 @@ pub enum Side {
 #[derive(Debug)]
 pub enum MoveType {
     March,
-    Capture
+    Capture,
 }
 
 #[derive(Debug)]
 pub enum MoveNature {
     Scalar,
-    Vector
+    Vector,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Piece {
     pub piece_type: PieceType,
-    pub color: Color
+    pub color: Color,
 }
 
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let val = match self.color {
-            Color::White => {
-                match self.piece_type {
-                    PieceType::Pawn   => "♙",
-                    PieceType::Knight => "♘",
-                    PieceType::Bishop => "♗",
-                    PieceType::Rook   => "♖",
-                    PieceType::Queen  => "♕",
-                    PieceType::King   => "♔",
-                }
+            Color::White => match self.piece_type {
+                PieceType::Pawn => "♙",
+                PieceType::Knight => "♘",
+                PieceType::Bishop => "♗",
+                PieceType::Rook => "♖",
+                PieceType::Queen => "♕",
+                PieceType::King => "♔",
             },
-            Color::Black => {
-                match self.piece_type {
-                    PieceType::Pawn   => "♟︎",
-                    PieceType::Knight => "♞",
-                    PieceType::Bishop => "♝",
-                    PieceType::Rook   => "♜",
-                    PieceType::Queen  => "♛",
-                    PieceType::King   => "♚",
-                }
+            Color::Black => match self.piece_type {
+                PieceType::Pawn => "♟︎",
+                PieceType::Knight => "♞",
+                PieceType::Bishop => "♝",
+                PieceType::Rook => "♜",
+                PieceType::Queen => "♛",
+                PieceType::King => "♚",
             },
         };
         write!(f, "{}", val)
@@ -103,7 +99,7 @@ pub type BoardLayer<T> = [T; CELLS_COUNT as usize];
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Address {
     pub col: u8,
-    pub row: u8
+    pub row: u8,
 }
 
 impl Address {
@@ -129,8 +125,12 @@ impl Address {
     pub fn get_color(&self) -> Color {
         let flip = self.row % 2;
         let is_black = (self.col % 2) == flip;
-        
-        if is_black { Color::Black } else { Color::White }
+
+        if is_black {
+            Color::Black
+        } else {
+            Color::White
+        }
     }
 
     pub fn get_shifted(&self, offset: (i8, i8)) -> Option<Address> {
@@ -140,10 +140,8 @@ impl Address {
         let new_col = (self.col as i8) + col_offset;
         let new_row = (self.row as i8) + row_offset;
 
-        if new_row >= 0
-        && new_row < (ROW_SIZE as i8)
-        && new_col >= 0
-        && new_col < (ROW_SIZE as i8) {
+        if new_row >= 0 && new_row < (ROW_SIZE as i8) && new_col >= 0 && new_col < (ROW_SIZE as i8)
+        {
             Some(Address::new(new_col as u8, new_row as u8))
         } else {
             None
@@ -158,12 +156,12 @@ impl FromStr for Address {
     type Err = ParseAddressError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut res: Self = Address{col:0, row: 0};
+        let mut res: Self = Address { col: 0, row: 0 };
 
         let chars = s.chars().collect::<Vec<_>>();
 
         if chars.len() != 2 {
-            return Err(ParseAddressError)
+            return Err(ParseAddressError);
         }
 
         let col = chars[0].to_ascii_lowercase();
@@ -172,22 +170,27 @@ impl FromStr for Address {
         if let c @ 'a'..='h' = col {
             res.col = (c as u8) - ('a' as u8)
         } else {
-            return Err(ParseAddressError)
+            return Err(ParseAddressError);
         }
 
         if let r @ '1'..='8' = row {
             res.row = (r as u8) - ('1' as u8)
         } else {
-            return Err(ParseAddressError)
+            return Err(ParseAddressError);
         }
-        
+
         Ok(res)
     }
 }
 
 impl Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", Self::get_col_name(self.col), Self::get_row_name(self.row))
+        write!(
+            f,
+            "{}{}",
+            Self::get_col_name(self.col),
+            Self::get_row_name(self.row)
+        )
     }
 }
 
@@ -207,7 +210,7 @@ impl Default for Board {
             whose_turn: Color::White,
             flip_board: false,
             white_graveyard: Vec::new(),
-            black_graveyard: Vec::new()
+            black_graveyard: Vec::new(),
         }
     }
 }
@@ -215,28 +218,80 @@ impl Default for Board {
 impl Board {
     pub fn new() -> Self {
         let spawn_piece = |color: Color, piece_type: PieceType| -> Option<Piece> {
-            Some(Piece {color, piece_type})
+            Some(Piece { color, piece_type })
         };
 
-        let w = |t: PieceType| -> Option<Piece> {
-            spawn_piece(Color::White, t)
-        };
+        let w = |t: PieceType| -> Option<Piece> { spawn_piece(Color::White, t) };
 
-        let b = |t: PieceType| -> Option<Piece> {
-            spawn_piece(Color::Black, t)
-        };
+        let b = |t: PieceType| -> Option<Piece> { spawn_piece(Color::Black, t) };
 
         use PieceType::*;
         Board {
             pieces: [
-                w(Rook), w(Knight), w(Bishop), w(Queen), w(King), w(Bishop), w(Knight), w(Rook),
-                w(Pawn), w(Pawn),   w(Pawn),   w(Pawn),  w(Pawn), w(Pawn),   w(Pawn),   w(Pawn),
-                None,    None,      None,      None,     None,    None,      None,      None,
-                None,    None,      None,      None,     None,    None,      None,      None,
-                None,    None,      None,      None,     None,    None,      None,      None,
-                None,    None,      None,      None,     None,    None,      None,      None,
-                b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),  b(Pawn), b(Pawn),   b(Pawn),   b(Pawn),
-                b(Rook), b(Knight), b(Bishop), b(Queen), b(King), b(Bishop), b(Knight), b(Rook)
+                w(Rook),
+                w(Knight),
+                w(Bishop),
+                w(Queen),
+                w(King),
+                w(Bishop),
+                w(Knight),
+                w(Rook),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                w(Pawn),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Pawn),
+                b(Rook),
+                b(Knight),
+                b(Bishop),
+                b(Queen),
+                b(King),
+                b(Bishop),
+                b(Knight),
+                b(Rook),
             ],
             ..Default::default()
         }
@@ -270,7 +325,11 @@ impl Board {
     }
 
     pub fn flip_player(&mut self) {
-        self.whose_turn = if self.whose_turn == Color::White { Color::Black } else {Color::White};
+        self.whose_turn = if self.whose_turn == Color::White {
+            Color::Black
+        } else {
+            Color::White
+        };
     }
 
     pub fn kill_piece(&mut self, address: Address) {
@@ -288,7 +347,7 @@ impl Board {
 
     pub fn move_piece(&mut self, from: Address, to: Address) {
         self.kill_piece(to);
-        
+
         let index_from = Self::get_index(from) as usize;
         let index_to = Self::get_index(to) as usize;
 
@@ -320,11 +379,7 @@ impl Display for Board {
             res += " ";
 
             for c in 0..ROW_SIZE {
-                let c = if self.flip_board {
-                    ROW_SIZE - c - 1
-                } else {
-                    c
-                };
+                let c = if self.flip_board { ROW_SIZE - c - 1 } else { c };
 
                 let cell = self.get_cell(Address::new(c, r));
 
@@ -342,11 +397,7 @@ impl Display for Board {
         res += "  ";
 
         for c in 0..ROW_SIZE {
-            let c = if self.flip_board {
-                ROW_SIZE - c - 1
-            } else {
-                c
-            };
+            let c = if self.flip_board { ROW_SIZE - c - 1 } else { c };
 
             res += &Address::get_col_name(c).to_string();
             res += " ";
@@ -365,7 +416,7 @@ impl Display for Board {
 
 #[cfg(test)]
 mod test {
-    use std::{cell::Cell};
+    use std::cell::Cell;
 
     use super::*;
 
@@ -396,9 +447,13 @@ mod test {
                 let r_int: u8 = (r as u8) - ('1' as u8);
                 let c_int: u8 = (c as u8) - ('a' as u8);
 
-                println!("{}: ({}, {})", addr_str, r_int, c_int);
-
-                assert_eq!(addr, Address {row: r_int, col: c_int});
+                assert_eq!(
+                    addr,
+                    Address {
+                        row: r_int,
+                        col: c_int
+                    }
+                );
             }
         }
     }
@@ -407,16 +462,17 @@ mod test {
     fn address_color() {
         let color = Cell::new(Color::Black);
         let flip_color = || {
-            color.set(
-                if color.get() == Color::Black { Color::White } else { Color::Black }
-            );
+            color.set(if color.get() == Color::Black {
+                Color::White
+            } else {
+                Color::Black
+            });
         };
 
         for r in 0..ROW_SIZE {
             for c in 0..ROW_SIZE {
                 let addr = Address::new(c, r);
 
-                println!("{}: {:?}", addr, color.get());
                 assert_eq!(addr.get_color(), color.get());
 
                 flip_color();
@@ -427,53 +483,19 @@ mod test {
 
     #[test]
     fn address_shift() {
-        let cell = |s: &str| -> Address {
-            Address::from_str(s).unwrap()
-        };
-        let addr = |row: u8, col :u8| -> Address {
-            Address::new(row, col)
-        };
+        let cell = |s: &str| -> Address { Address::from_str(s).unwrap() };
+        let addr = |row: u8, col: u8| -> Address { Address::new(row, col) };
 
-        assert_eq!(
-            cell("e4").get_shifted((0, -2)),
-            Some(cell("e2"))
-        );
-        assert_eq!(
-            addr(5, 5).get_shifted((1, 2)),
-            Some(addr(6, 7))
-        );
-        assert_eq!(
-            cell("a1").get_shifted((0, 0)),
-            Some(cell("a1"))
-        );
-        assert_eq!(
-            cell("a1").get_shifted((-1, 0)),
-            None
-        );
-        assert_eq!(
-            cell("a1").get_shifted((0, -1)),
-            None
-        );
-        assert_eq!(
-            cell("a1").get_shifted((-1, -1)),
-            None
-        );
-        assert_eq!(
-            cell("g8").get_shifted((-1, -1)),
-            Some(cell("f7"))
-        );
-        assert_eq!(
-            cell("g8").get_shifted((0, 1)),
-            None
-        );
-        assert_eq!(
-            cell("g8").get_shifted((1, 0)),
-            Some(cell("h8"))
-        );
-        assert_eq!(
-            cell("a8").get_shifted((7, -7)),
-            Some(cell("h1"))
-        );
+        assert_eq!(cell("e4").get_shifted((0, -2)), Some(cell("e2")));
+        assert_eq!(addr(5, 5).get_shifted((1, 2)), Some(addr(6, 7)));
+        assert_eq!(cell("a1").get_shifted((0, 0)), Some(cell("a1")));
+        assert_eq!(cell("a1").get_shifted((-1, 0)), None);
+        assert_eq!(cell("a1").get_shifted((0, -1)), None);
+        assert_eq!(cell("a1").get_shifted((-1, -1)), None);
+        assert_eq!(cell("g8").get_shifted((-1, -1)), Some(cell("f7")));
+        assert_eq!(cell("g8").get_shifted((0, 1)), None);
+        assert_eq!(cell("g8").get_shifted((1, 0)), Some(cell("h8")));
+        assert_eq!(cell("a8").get_shifted((7, -7)), Some(cell("h1")));
     }
 
     #[test]
@@ -486,7 +508,6 @@ mod test {
             for c in 0..ROW_SIZE {
                 let addr = Address::new(c, r);
 
-                println!("{}: {}", addr, index);
                 assert_eq!(Board::get_index(addr), index);
 
                 index += 1;

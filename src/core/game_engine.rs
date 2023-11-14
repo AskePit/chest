@@ -9,53 +9,36 @@ use super::chess_types::*;
 //
 // offsets are given for white pieces
 // for black pieces offsets should be rotated by 180 degrees
-static PAWN_MARCH_OFFSET: &[(i8, i8)] = &[
-    (0, 1)
-];
+static PAWN_MARCH_OFFSET: &[(i8, i8)] = &[(0, 1)];
 
-static PAWN_LONG_MARCH_OFFSET: &[(i8, i8)] = &[
-    (0, 2)
-];
+static PAWN_LONG_MARCH_OFFSET: &[(i8, i8)] = &[(0, 2)];
 
-static PAWN_CAPTURE_OFFSETS: &[(i8, i8)] = &[
-    (-1, 1),
-    ( 1, 1)
-];
+static PAWN_CAPTURE_OFFSETS: &[(i8, i8)] = &[(-1, 1), (1, 1)];
 
 static KNIGHT_MOVE_OFFSETS: &[(i8, i8)] = &[
-    (-1,  2),
-    ( 1,  2),
-    ( 2,  1),
-    ( 2, -1),
-    ( 1, -2),
+    (-1, 2),
+    (1, 2),
+    (2, 1),
+    (2, -1),
+    (1, -2),
     (-1, -2),
     (-2, -1),
-    (-2,  1),
+    (-2, 1),
 ];
 
-static BISHOP_MOVE_OFFSETS: &[(i8, i8)] = &[
-    (-1, -1),
-    (-1,  1),
-    ( 1, -1),
-    ( 1,  1),
-];
+static BISHOP_MOVE_OFFSETS: &[(i8, i8)] = &[(-1, -1), (-1, 1), (1, -1), (1, 1)];
 
-static ROOK_MOVE_OFFSETS: &[(i8, i8)] = &[
-    (-1,  0),
-    ( 0,  1),
-    ( 1,  0),
-    ( 0, -1),
-];
+static ROOK_MOVE_OFFSETS: &[(i8, i8)] = &[(-1, 0), (0, 1), (1, 0), (0, -1)];
 
 static KING_QUEEN_MOVE_OFFSETS: &[(i8, i8)] = &[
-    (-1,  0),
-    ( 0,  1),
-    ( 1,  0),
-    ( 0, -1),
+    (-1, 0),
+    (0, 1),
+    (1, 0),
+    (0, -1),
     (-1, -1),
-    (-1,  1),
-    ( 1, -1),
-    ( 1,  1),
+    (-1, 1),
+    (1, -1),
+    (1, 1),
 ];
 
 #[derive(Debug, PartialEq, Eq)]
@@ -63,25 +46,23 @@ pub enum MoveError {
     InvalidAddress(ParseAddressError),
     NoPiece,
     WrongColorTurn(Color),
-    UnreachableMove{from: Address, to: Address},
+    UnreachableMove { from: Address, to: Address },
 }
 
 pub type MovesResult = Result<Vec<Address>, MoveError>;
 
 pub fn get_piece_moves(board: &Board, address: Address) -> MovesResult {
-    let piece = board.get_cell(address)
-        .as_ref()
-        .ok_or(MoveError::NoPiece)?;
-    
+    let piece = board.get_cell(address).as_ref().ok_or(MoveError::NoPiece)?;
+
     let mut res = Vec::<Address>::new();
 
     let f = match piece.piece_type {
-        PieceType::Pawn   => get_pawn_moves,
+        PieceType::Pawn => get_pawn_moves,
         PieceType::Knight => get_knight_moves,
         PieceType::Bishop => get_bishop_moves,
-        PieceType::Rook   => get_rook_moves,
-        PieceType::Queen  => get_queen_moves,
-        PieceType::King   => get_king_moves,
+        PieceType::Rook => get_rook_moves,
+        PieceType::Queen => get_queen_moves,
+        PieceType::King => get_king_moves,
     };
     f(board, address, piece.color, &mut res);
     Ok(res)
@@ -90,12 +71,15 @@ pub fn get_piece_moves(board: &Board, address: Address) -> MovesResult {
 fn get_pawn_moves(board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
     static WHITE_PAWN_INITIAL_ROW: u8 = 1; // like e2
     static BLACK_PAWN_INITIAL_ROW: u8 = 6; // like e7
-    let is_initial_row =
-        (color == Color::White && address.row == WHITE_PAWN_INITIAL_ROW)
+    let is_initial_row = (color == Color::White && address.row == WHITE_PAWN_INITIAL_ROW)
         || (color == Color::Black && address.row == BLACK_PAWN_INITIAL_ROW);
-    
+
     let rotate_by_color = |offset: (i8, i8)| -> (i8, i8) {
-        if color == Color::White { offset } else { (-offset.0, -offset.1) }
+        if color == Color::White {
+            offset
+        } else {
+            (-offset.0, -offset.1)
+        }
     };
 
     // long march
@@ -128,7 +112,13 @@ fn get_pawn_moves(board: &Board, address: Address, color: Color, out: &mut Vec<A
     }
 }
 
-fn get_scalar_piece_moves(scalar_offsets: &[(i8, i8)], board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+fn get_scalar_piece_moves(
+    scalar_offsets: &[(i8, i8)],
+    board: &Board,
+    address: Address,
+    color: Color,
+    out: &mut Vec<Address>,
+) {
     for offset in scalar_offsets {
         if let Some(move_address) = address.get_shifted(*offset) {
             if let Some(ref piece) = *board.get_cell(move_address) {
@@ -142,7 +132,13 @@ fn get_scalar_piece_moves(scalar_offsets: &[(i8, i8)], board: &Board, address: A
     }
 }
 
-fn get_vector_piece_moves(vector_offsets: &[(i8, i8)], board: &Board, address: Address, color: Color, out: &mut Vec<Address>) {
+fn get_vector_piece_moves(
+    vector_offsets: &[(i8, i8)],
+    board: &Board,
+    address: Address,
+    color: Color,
+    out: &mut Vec<Address>,
+) {
     for offset in vector_offsets {
         let mut addr = address.get_shifted(*offset);
         while let Some(move_address) = addr {
@@ -199,13 +195,12 @@ pub fn make_move(board: &mut Board, from: Address, to: Address) -> Result<(), Mo
 
 pub fn make_moves(board: &mut Board, moves: Vec<(&str, &str)>) -> Result<(), MoveError> {
     for m in moves {
-        let wrap_error = |parse_error| {
-            MoveError::InvalidAddress(parse_error)
-        };
+        let wrap_error = |parse_error| MoveError::InvalidAddress(parse_error);
 
-        make_move(board,
+        make_move(
+            board,
             Address::from_str(m.0).map_err(wrap_error)?,
-            Address::from_str(m.1).map_err(wrap_error)?
+            Address::from_str(m.1).map_err(wrap_error)?,
         )?
     }
 
